@@ -1,5 +1,5 @@
 # Ticket bot (拓元, KKTIX 搶票機器人)
-
+Clone this repo first.
 ## Installation
 ```ruby
 pip install -r requirements.txt
