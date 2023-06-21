@@ -12,6 +12,7 @@ import numpy as np
 import urllib
 import cv2
 import math
+from typing import Optional
 
 tixcraft = False
 if tixcraft:
@@ -21,7 +22,7 @@ if tixcraft:
     from model import model, captcha
 
 browser_path = "C:\ProgramData\Microsoft\Windows\Start/Menu\Programs\msedgedriver.exe"
-model_path = None
+model_path = 'ckpts/6_12_0_53/best_model.pt'
 
 class ticket_bot():
     def __init__(self,options,website='tixcraft',ticket_num=1,cuda=False,login=None):
@@ -88,7 +89,7 @@ class ticket_bot():
         elif self.website == 'kktix':
             self.kktix(**args)
 
-    def tixcraft(self,date=None,seat_choice=None,multi_zone=False,price=None):
+    def tixcraft(self, date: Optional[str]=None, seat_choice: Optional[str]=None, price: Optional[str]=None):
         assert date is not None and (price is not None or seat_choice is not None)
         browser = self.browser
         refresh_flag = True
@@ -155,7 +156,8 @@ class ticket_bot():
                 flag = False
         return    
 
-    def kktix(self,seat_choice=None,price=None,**kwargs):
+    def kktix(self,seat_choice: Optional[str]=None,price: Optional[int]=None,**kwargs):
+        assert price is not None or seat_choice is not None
         if price is not None :
             if math.log(price,10) >= 3:
                 price = str(price)
