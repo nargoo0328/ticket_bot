@@ -8,7 +8,7 @@ If you are using pytorch for captcha model and use cpu only:
 ```ruby
 pip install -r requirements_torch.txt
 ```
-If you are using gpu, please check https://pytorch.org/get-started/previous-versions/ for installation.
+If you are using gpu, please check https://pytorch.org/get-started/previous-versions/ and find the corresponding torch version for installation.
 
 ## Getting started
 ### Step1
