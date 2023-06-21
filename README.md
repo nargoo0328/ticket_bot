@@ -17,7 +17,7 @@ conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cpuonly -c 
 ```
 
 ## Getting started
-### Step1: Find your browser execute path
+### Step1: Find your browser execution path
 Please find your MS Edge browser path and paste the path on top of  ticket_bot.py.
 ```ruby
 browser_path = "YOUR_EDGE_BROWSER_PATH"
