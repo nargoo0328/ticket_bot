@@ -5,7 +5,6 @@ import torch.nn.functional as F
 class ResBlock(nn.Module):
     def __init__(self, inchannel, outchannel, stride=1):
         super(ResBlock, self).__init__()
-        #这里定义了残差块内连续的2个卷积层
         self.left = nn.Sequential(
             nn.Conv2d(inchannel, outchannel, kernel_size=3, stride=stride, padding=1, bias=False),
             nn.BatchNorm2d(outchannel),
@@ -15,7 +14,6 @@ class ResBlock(nn.Module):
         )
         self.shortcut = nn.Sequential()
         if stride != 1 or inchannel != outchannel:
-            #shortcut，这里为了跟2个卷积层的结果结构一致，要做处理
             self.shortcut = nn.Sequential(
                 nn.Conv2d(inchannel, outchannel, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(outchannel)
@@ -23,7 +21,6 @@ class ResBlock(nn.Module):
             
     def forward(self, x):
         out = self.left(x)
-        #将2个卷积层的输出跟处理过的x相加，实现ResNet的基本结构
         out = out + self.shortcut(x)
         out = F.relu(out)
         
@@ -43,8 +40,7 @@ class ResNet(nn.Module):
         for i in range(4):
             layers.append(self.make_layer(ResBlock, in_channel*(2**i), 2, stride=2))
         self.layers = nn.ModuleList(layers)    
-
-    #这个函数主要是用来，重复同一个残差块    
+  
     def make_layer(self, block, channels, num_blocks, stride):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
@@ -54,7 +50,6 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
     
     def forward(self, x):
-        #在这里，整个ResNet18的结构就很清晰了
         features_map = []
         out = self.conv1(x)
         # C2
