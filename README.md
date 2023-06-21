@@ -1,4 +1,4 @@
-# Ticket bot (搶票機器人)
+# Ticket bot (拓元, KKTIX 搶票機器人)
 
 ## Installation
 ```ruby
