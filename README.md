@@ -12,16 +12,17 @@ If you are using gpu, please check https://pytorch.org/get-started/previous-vers
 
 ## Getting started
 ### Step1: Find your browser execute path
-Please find your MS Edge browser path and paste into the $browser_path into ticket_bot.py.
+Please find your MS Edge browser path and paste the path on top of  ticket_bot.py.
 ```ruby
 browser_path = "YOUR_EDGE_BROWSER_PATH"
 ```
 ### Step2: Run
 Please refer to run.ipynb
 ### Step3: Captcha model (optional)
-Download captcha model and paste model path into ticket_bot.py 
+Download captcha model and paste model path on top of ticket_bot.py 
 ```ruby
 model_path = "YOUR_MODEL_PATH"
+tixcraft = True
 ```
 ## Captcha model
 ### Model structure
