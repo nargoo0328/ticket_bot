@@ -11,8 +11,8 @@ pip install -r requirements_torch.txt
 If you are using gpu, please check https://pytorch.org/get-started/previous-versions/ and find the corresponding torch version for installation.
 
 ## Getting started
-### Step1: Find your browser execute path
-Please find your MS Edge browser path and paste the path on top of  ticket_bot.py.
+### Step1: Find your browser execution path
+Please find your MS Edge browser execution path and paste the path on top of  ticket_bot.py.
 ```ruby
 browser_path = "YOUR_EDGE_BROWSER_PATH"
 ```
