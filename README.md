@@ -2,10 +2,11 @@
 
 ## Installation
 Clone this repo first.
+Install required python libraries.
 ```ruby
 pip install -r requirements.txt
 ```
-If you are using pytorch for captcha model and use cpu only:
+If you are using pytorch for captcha model(tixcraft only) and use cpu only:
 ```ruby
 pip install -r requirements_torch.txt
 ```
