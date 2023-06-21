@@ -4,6 +4,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.edge.options import Options
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 import time
 from PIL import Image
 from io import BytesIO
@@ -12,15 +13,27 @@ import urllib
 import cv2
 import math
 
-import torchvision.transforms as transforms
-import torch.nn.functional as F
-import torch
-from model import model, captcha
+tixcraft = False
+if tixcraft:
+    import torchvision.transforms as transforms
+    import torch.nn.functional as F
+    import torch
+    from model import model, captcha
 
-class tixcraft_bot():
+class ticket_bot():
     def __init__(self,options,website='tixcraft',ticket_num=1,cuda=False,login=None):
+        """
+            args:
+                options: web browser options
+                website: tixcraft or kktix
+                ticket_num: Number of tickets you want to buy
+                cuda: If you are using GPU to run captcha model
+                login: For kktix only,
+                    format: List[str{account},str{password}]
+        """
         self.browser = webdriver.Edge("C:\ProgramData\Microsoft\Windows\Start/Menu\Programs\msedgedriver.exe",options = options)
         self.wait = WebDriverWait(self.browser, 5)
+        self.actions = ActionChains(self.browser)
         self.website = website
         self.ticket_num = ticket_num
         if login is not None:
@@ -36,18 +49,17 @@ class tixcraft_bot():
             # captcha model
             self.cuda = cuda
             self.engine = get_engine('ckpts/6_12_0_53/best_model.pt',cuda=cuda)
-            if cuda:
-                self.engine.model = self.engine.model.cuda()
             self.transform = transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize((0.8982),(0.1465)),
             ])
+            if cuda:
+                self.engine.model = self.engine.model.cuda()
+            self.run_image(np.zeros((96,128)).astype(np.float32))
+            
 
     def run_image(self,img):
         assert type(img) == np.ndarray
-
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        img = cv2.resize(img,(128,96),interpolation=cv2.INTER_NEAREST)
         img = self.transform(img)
         if self.cuda:
             img = img.cuda()
@@ -73,8 +85,8 @@ class tixcraft_bot():
         elif self.website == 'kktix':
             self.kktix(**args)
 
-    def tixcraft(self,date=None,seat_choice=None,multi_zone=False):
-        assert date is not None and seat_choice is not None
+    def tixcraft(self,date=None,seat_choice=None,multi_zone=False,price=None):
+        assert date is not None and (price is not None or seat_choice is not None)
         browser = self.browser
         refresh_flag = True
         wait = self.wait
@@ -104,7 +116,7 @@ class tixcraft_bot():
         for area_list in areas_list.find_elements(By.CLASS_NAME,'area-list'):
             seats_list = area_list.find_elements(By.XPATH,'li')
             for seat in seats_list:
-                if str(seat_choice) in seat.text:
+                if str(seat_choice) in seat.text or str(price) in seat.text:
                     seat.find_element(By.XPATH,'a').click()
                     flag = True
                     break
@@ -140,25 +152,31 @@ class tixcraft_bot():
                 flag = False
         return    
 
-    def kktix(self,date=None,seat_choice=None,price=None):
-        if math.log(price,10) >= 3:
-            price = str(price)
-            price = price[:-3] + ',' +price[-3:]
+    def kktix(self,seat_choice=None,price=None,**kwargs):
+        if price is not None :
+            if math.log(price,10) >= 3:
+                price = str(price)
+                price = price[:-3] + ',' +price[-3:]
+        wait = self.wait
         browser = self.browser                   
         refresh_flag = None
         ticket_flag = False
         while True:
+            wait.until(EC.element_to_be_clickable((By.XPATH,'/html/body/div[3]/div[4]/div/div/div[1]/div/div[2]/div/div[3]/button'))).click()
             try:    
-                ticket_root = browser.find_element(By.CSS_SELECTOR,'#registrationsNewApp > div > div:nth-child(5) > div.ticket-list-wrapper.ng-scope > div.ticket-list.ng-scope') 
+                ticket_root = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR,'#registrationsNewApp > div > div:nth-child(5) > div.ticket-list-wrapper.ng-scope > div.ticket-list.ng-scope')))#browser.find_element(By.CSS_SELECTOR,'#registrationsNewApp > div > div:nth-child(5) > div.ticket-list-wrapper.ng-scope > div.ticket-list.ng-scope') 
             except:
                 print("Try with 'seat'")
-                ticket_root = browser.find_element(By.CSS_SELECTOR,'#registrationsNewApp > div > div:nth-child(5) > div.ticket-list-wrapper.ng-scope.with-seat > div.ticket-list.ng-scope')
+                ticket_root = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR,'#registrationsNewApp > div > div:nth-child(5) > div.ticket-list-wrapper.ng-scope.with-seat > div.ticket-list.ng-scope')))#browser.find_element(By.CSS_SELECTOR,'#registrationsNewApp > div > div:nth-child(5) > div.ticket-list-wrapper.ng-scope.with-seat > div.ticket-list.ng-scope')
             tickets = ticket_root.find_elements(By.XPATH,'.//*')                     
             for ticket in tickets:
                 if ticket.get_attribute('class') == 'ticket-unit ng-scope':
-                    current_price = ticket.find_element(By.CLASS_NAME,'ticket-price')
-                    if str(price) in current_price.text:
-                        print("Selecting:",current_price.text)
+                    self.actions.move_to_element(ticket).perform()
+                    ticket_info = ticket.find_element(By.CLASS_NAME,'display-table-row')
+                    # ticket_type = ticket.find_element(By.CLASS_NAME,'ticket-name ng-binding')
+                    # current_price = ticket.find_element(By.CLASS_NAME,'ticket-price')
+                    if str(price) in ticket_info.text or str(seat_choice) in ticket_info.text:
+                        print(f"Found ticket: {price}",end='\r')
                         ticket_flag = True
                         break
             if not ticket_flag:
@@ -171,7 +189,7 @@ class tixcraft_bot():
             if refresh_flag:
                 break
             else:
-                print("Refreshing")
+                print("Ticket is not ready. Refreshing",end='\r')
                 self.get_page()
         tmp.find_element(By.CSS_SELECTOR,'input').send_keys([str(self.ticket_num)])
                                       #
@@ -203,27 +221,3 @@ def url_to_image(url,method=1):
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = cv2.resize(img,(128,96),interpolation=cv2.INTER_NEAREST)
         return img
-    
-def wait_until(element, selector, s, mutiple=False,click=False):
-    flag = True
-    if mutiple:
-        while flag:
-            ret = element.find_elements(selector, s)
-            if len(ret) != 0:
-                flag = False
-    else:
-        if click:
-            while flag:
-                try:
-                    ret = element.find_element(selector, s).click()
-                    flag = False
-                except:
-                    continue
-        else:
-            while flag:
-                try:
-                    ret = element.find_element(selector, s)
-                    flag = False
-                except:
-                    continue
-    return ret
