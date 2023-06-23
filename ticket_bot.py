@@ -20,9 +20,10 @@ if tixcraft:
     import torch.nn.functional as F
     import torch
     from model import model, captcha
+    model_path = 'ckpts/6_12_0_53/best_model.pt'
 
 browser_path = "C:\ProgramData\Microsoft\Windows\Start/Menu\Programs\msedgedriver.exe"
-model_path = 'ckpts/6_12_0_53/best_model.pt'
+
 
 class ticket_bot():
     def __init__(self,options,website='tixcraft',ticket_num=1,cuda=False,login=None):
