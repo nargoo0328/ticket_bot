@@ -1,4 +1,4 @@
-# Ticket bot (拓元, KKTIX 搶票機器人)
+# Ticket bot (拓元&驗證碼模型, KKTIX 搶票機器人)
 Clone this repo first.
 ## Installation
 ```ruby
