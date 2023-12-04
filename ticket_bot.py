@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.edge.options import Options
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
@@ -13,16 +14,15 @@ import cv2
 import math
 from typing import Optional
 
-tixcraft = False
+tixcraft = True
 if tixcraft:
     import torchvision.transforms as transforms
     import torch.nn.functional as F
     import torch
     from model import model, captcha
-    model_path = 'ckpts/6_12_0_53/best_model.pt'
 
 browser_path = "C:\ProgramData\Microsoft\Windows\Start/Menu\Programs\msedgedriver.exe"
-
+model_path = 'ckpts/6_12_0_53/best_model.pt'
 
 class ticket_bot():
     def __init__(self,options,website='tixcraft',ticket_num=1,cuda=False,login=None):
@@ -89,8 +89,18 @@ class ticket_bot():
         elif self.website == 'kktix':
             self.kktix(**args)
 
-    def tixcraft(self, date: Optional[str]=None, seat_choice: Optional[str]=None, price: Optional[str]=None):
-        assert date is not None and (price is not None or seat_choice is not None)
+    def login(self,token):
+        if token is not None:
+            self.browser.add_cookie({"name": "SID", "value": token})
+
+    def tixcraft(self, date: Optional[str]=None, seat_choice: Optional[list]=None, price: Optional[str]=None):
+
+        def check_seat(text):
+            for s in seat_choice:
+                if s in text:
+                    return True
+            return False
+        
         browser = self.browser
         refresh_flag = True
         wait = self.wait
@@ -114,19 +124,39 @@ class ticket_bot():
                         self.get_page() 
                     break
         
-        print("\n選座位")                                   
-        areas_list = wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]')))
-        flag = False
-        for area_list in areas_list.find_elements(By.CLASS_NAME,'area-list'):
-            seats_list = area_list.find_elements(By.XPATH,'li')
-            for seat in seats_list:
-                if str(seat_choice) in seat.text or str(price) in seat.text:
-                    seat.find_element(By.XPATH,'a').click()
-                    flag = True
+        print("\n選座位")
+        refresh_flag = True
+        while refresh_flag:                        
+            areas_list = wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]')))
+            flag = False
+            for area_list in areas_list.find_elements(By.CLASS_NAME,'area-list'):
+                seats_list = area_list.find_elements(By.XPATH,'li')
+                for seat in seats_list:
+                    if check_seat(seat.text) or str(price) in seat.text:
+                        self.actions.move_to_element(seat).perform()
+                        try:
+                            seat.find_element(By.XPATH,'a').click()
+                            refresh_flag = False
+                            flag = True
+                        except:
+                            print("Out of tickets. Refreshing")
+                            self.get_page(self.browser.current_url)
+                        break
+                if flag:
                     break
-            if flag:
-                break
-        assert flag == True
+            if not flag:
+                # choose last one
+                print("Cannot find target seat. Choosing the last one.")
+                self.actions.move_to_element(seat).perform()
+                try:
+                    seat.find_element(By.XPATH,'a').click()
+                    refresh_flag = False
+                    flag = True
+                except:
+                    print("Out of tickets. Refreshing")
+                    self.get_page(self.browser.current_url)
+                
+
         while flag:
             print("選票數")
             tickets_list = wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[2]/div[1]/div[3]/div/div/div/form/div[1]/table/tbody'))).find_elements(By.CLASS_NAME,'gridc')
