@@ -25,7 +25,7 @@ browser_path = "C:\ProgramData\Microsoft\Windows\Start/Menu\Programs\msedgedrive
 model_path = 'ckpts/6_12_0_53/best_model.pt'
 
 class ticket_bot():
-    def __init__(self,options,website='tixcraft',ticket_num=1,cuda=False,login=None):
+    def __init__(self,options,browser_type,website='tixcraft',ticket_num=1,cuda=False,login=None):
         """
             args:
                 options: web browser options
@@ -35,7 +35,10 @@ class ticket_bot():
                 login: For kktix only,
                     format: List[str{account},str{password}]
         """
-        self.browser = webdriver.Edge(browser_path,options = options)
+        if browser_type == "Edge":
+            self.browser = webdriver.Edge(browser_path,options = options)
+        elif browser_type == "Chrome":
+            self.browser = webdriver.Chrome()
         self.wait = WebDriverWait(self.browser, 5)
         self.actions = ActionChains(self.browser)
         self.website = website
