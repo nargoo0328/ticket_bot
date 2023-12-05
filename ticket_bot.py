@@ -21,8 +21,8 @@ if tixcraft:
     import torch
     from model import model, captcha
 
-browser_path = "C:\ProgramData\Microsoft\Windows\Start/Menu\Programs\msedgedriver.exe"
-model_path = 'ckpts/6_12_0_53/best_model.pt'
+# browser_path = ".\msedgedriver.exe"
+model_path = './best_model.pt'
 
 class ticket_bot():
     def __init__(self,options,browser_type,website='tixcraft',ticket_num=1,cuda=False,login=None):
@@ -36,7 +36,8 @@ class ticket_bot():
                     format: List[str{account},str{password}]
         """
         if browser_type == "Edge":
-            self.browser = webdriver.Edge(browser_path,options = options)
+            # self.browser = webdriver.Edge(browser_path,options = options)
+            self.browser = webdriver.Edge(options)
         elif browser_type == "Chrome":
             self.browser = webdriver.Chrome()
         self.wait = WebDriverWait(self.browser, 5)
