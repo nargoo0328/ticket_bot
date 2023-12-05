@@ -115,9 +115,10 @@ class ticket_bot():
             game_list = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR,'#gameList > table > tbody')))
             game_list = game_list.find_elements(By.XPATH,'tr')
             for game in game_list:
-                wait.until(EC.visibility_of(game))
                 game_child = game.find_elements(By.XPATH,'td')
                 if date in game_child[0].text:
+                    self.browser.execute_script("arguments[0].scrollIntoView();", game)
+                    time.sleep(0.3)
                     try:
                         game_child[-1].find_element(By.XPATH,'button')
                         game_child[-1].click()
@@ -128,8 +129,9 @@ class ticket_bot():
                     break
         
         print("\n選座位")
-        refresh_flag = True
-        while refresh_flag:                        
+        refresh_flag = True 
+        skip_region = True if "張數" in self.browser.title else False
+        while refresh_flag and not skip_region:                        
             areas_list = wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]')))
             flag = False
             for area_list in areas_list.find_elements(By.CLASS_NAME,'area-list'):
@@ -158,7 +160,7 @@ class ticket_bot():
                 except:
                     print("Out of tickets. Refreshing")
                     self.get_page(self.browser.current_url)
-                
+        flag = True
 
         while flag:
             print("選票數")
@@ -180,7 +182,10 @@ class ticket_bot():
             browser.find_element(By.XPATH,'//*[@id="TicketForm_agree"]').click()
 
             # submit
-            browser.find_element(By.XPATH,'//*[@id="form-ticket-ticket"]/div[4]/button[2]').click()
+            if skip_region:
+                browser.find_element(By.XPATH,'//*[@id="form-ticket-ticket"]/div[4]/button').click()
+            else:
+                browser.find_element(By.XPATH,'//*[@id="form-ticket-ticket"]/div[4]/button[2]').click()
             try:
                 alert = browser.switch_to.alert
                 alert.accept()
