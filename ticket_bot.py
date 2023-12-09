@@ -126,7 +126,7 @@ class ticket_bot():
             current_time = datetime.datetime.now()
             tts = target_second - current_time.day *3600*24 - current_time.hour * 3600 - current_time.minute * 60 - current_time.second - current_time.microsecond/1e6 
             print(f"Current time: {current_time.hour}:{current_time.minute}:{current_time.second}.{current_time.microsecond//1000}, time to sell: {round(tts,3)} seconds",end='\r')
-            if tts <1.0:
+            if tts <0.9:
                 print()
                 break
             time.sleep(0.001)
