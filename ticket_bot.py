@@ -13,7 +13,8 @@ import urllib
 import cv2
 import math
 from typing import Optional
-
+import datetime
+ 
 tixcraft = True
 if tixcraft:
     import torchvision.transforms as transforms
@@ -21,7 +22,7 @@ if tixcraft:
     import torch
     from model import model, captcha
 
-# browser_path = ".\msedgedriver.exe"
+# browser_path = "C:\ProgramData\Microsoft\Windows\Start/Menu\Programs\msedgedriver.exe"
 model_path = './best_model.pt'
 
 class ticket_bot():
@@ -36,7 +37,6 @@ class ticket_bot():
                     format: List[str{account},str{password}]
         """
         if browser_type == "Edge":
-            # self.browser = webdriver.Edge(browser_path,options = options)
             self.browser = webdriver.Edge(options)
         elif browser_type == "Chrome":
             self.browser = webdriver.Chrome()
@@ -87,6 +87,13 @@ class ticket_bot():
             url = self.url
         self.browser.get(url)
 
+    def click_cookie(self):
+        try:
+            self.wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[6]/div[2]/div/div[2]/div[1]/div/div[2]/div/div[1]/button'))).click()
+            print("Clicking accept cookies...")
+        except:
+            pass
+
     def run(self,**args):
         if self.website == 'tixcraft':
             self.tixcraft(**args)
@@ -97,76 +104,111 @@ class ticket_bot():
         if token is not None:
             self.browser.add_cookie({"name": "SID", "value": token})
 
-    def tixcraft(self, date: Optional[str]=None, seat_choice: Optional[list]=None, price: Optional[str]=None):
+    def get_average_process_time(self,times=50):
+        print(f"Start refreshing pages for {times} times")
+        process_time = []
+        for _ in range(times):
+            s = time.time()
+            element = self.browser.find_element(By.XPATH,'//*[@id="tab-func"]/li[1]/a')
+            element.click()
+            game_list = self.wait.until(EC.presence_of_element_located((By.CSS_SELECTOR,'#gameList > table > tbody')))
+            game_list = game_list.find_elements(By.XPATH,'tr')
+            self.wait.until(EC.visibility_of(game_list[0]))
+            process_time.append(time.time()-s) 
+            self.get_page()
+        print(f"Average process time: {np.array(process_time).mean()}")
+        self.avg_time = np.array(process_time).mean()
+
+    def check_time(self,target_time):
+        date, hour, minute, second = target_time
+        target_second = date * 3600 * 24 + hour*3600 + minute * 60 + second # - self.avg_time
+        while True:
+            current_time = datetime.datetime.now()
+            tts = target_second - current_time.day *3600*24 - current_time.hour * 3600 - current_time.minute * 60 - current_time.second - current_time.microsecond/1e6 
+            print(f"Current time: {current_time.hour}:{current_time.minute}:{current_time.second}.{current_time.microsecond//1000}, time to sell: {round(tts,3)} seconds",end='\r')
+            if tts <1.0:
+                print()
+                break
+            time.sleep(0.001)
+        return True
+
+    def tixcraft(self, target_time: Optional[list]=None, date: Optional[str]=None, seat_choice: Optional[list]=None, price: Optional[str]=None):
 
         def check_seat(text):
-            for s in seat_choice:
+            for i,s in enumerate(seat_choice):
                 if s in text:
-                    return True
-            return False
+                    return i
+            return -1
         
         browser = self.browser
         refresh_flag = True
         wait = self.wait
         print("選場次")
+        self.check_time(target_time)
         while refresh_flag:
-            browser.find_element(By.XPATH,'//*[@id="tab-func"]/li[1]/a').click()
+            element = browser.find_element(By.XPATH,'//*[@id="tab-func"]/li[1]/a')
+            element.click()
+            # wait.until(EC.visibility_of(element)).click()
 
             # 選場次
             game_list = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR,'#gameList > table > tbody')))
             game_list = game_list.find_elements(By.XPATH,'tr')
+            wait.until(EC.visibility_of(game_list[0]))
             for game in game_list:
                 game_child = game.find_elements(By.XPATH,'td')
                 if date in game_child[0].text:
-                    self.browser.execute_script("arguments[0].scrollIntoView();", game)
-                    time.sleep(0.3)
-                    try:
-                        game_child[-1].find_element(By.XPATH,'button')
-                        game_child[-1].click()
+                    if "立即訂購" in game_child[-1].text:
+                        try:
+                            self.browser.execute_script("arguments[0].scrollIntoView(true);", game_child[-1])
+                            time.sleep(0.2)
+                            game_child[-1].click()
+                        except:
+                            print("PASS")
+                            self.browser.execute_script("arguments[0].scrollIntoView(true);", game_child[-1])
+                            time.sleep(0.5)
+                            game_child[-1].click()
                         refresh_flag = False
-                    except:
-                        print("Tickets are not available, refreshing...",end='\r')   
+                    else:
+                        print("\tTickets are not available, refreshing...")   
                         self.get_page() 
                     break
         
         print("\n選座位")
+
         refresh_flag = True 
         skip_region = True if "張數" in self.browser.title else False
+
         while refresh_flag and not skip_region:                        
             areas_list = wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[2]/div[1]/div[3]/div/div/div/div[2]/div[2]')))
             flag = False
             for area_list in areas_list.find_elements(By.CLASS_NAME,'area-list'):
                 seats_list = area_list.find_elements(By.XPATH,'li')
                 for seat in seats_list:
-                    if check_seat(seat.text) or str(price) in seat.text:
+                    seat_index = check_seat(seat.text)
+                    seat_flag = True if seat_index >=0 else False
+                    if seat_flag or str(price) in seat.text:
+                        print(f"\t選擇座位: {seat.text}")
                         self.actions.move_to_element(seat).perform()
                         try:
                             seat.find_element(By.XPATH,'a').click()
                             refresh_flag = False
-                            flag = True
                         except:
-                            print("Out of tickets. Refreshing")
-                            self.get_page(self.browser.current_url)
+                            seat_choice.pop(seat_index)
+                        flag = True
                         break
                 if flag:
                     break
             if not flag:
-                # choose last one
-                print("Cannot find target seat. Choosing the last one.")
-                self.actions.move_to_element(seat).perform()
-                try:
-                    seat.find_element(By.XPATH,'a').click()
-                    refresh_flag = False
-                    flag = True
-                except:
-                    print("Out of tickets. Refreshing")
-                    self.get_page(self.browser.current_url)
+                print("\t找不到目標座位，請手動點選")
+                refresh_flag = False
         flag = True
-
+        print("\n選票數")
         while flag:
-            print("選票數")
-            tickets_list = wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[2]/div[1]/div[3]/div/div/div/form/div[1]/table/tbody'))).find_elements(By.CLASS_NAME,'gridc')
-
+            try:
+                tickets_list = wait.until(EC.presence_of_element_located((By.XPATH,'/html/body/div[2]/div[1]/div[3]/div/div/div/form/div[1]/table/tbody'))).find_elements(By.CLASS_NAME,'gridc')
+            except:
+                print("\tWating for user...")
+                continue
             # default index 0 (standard ticket)
             ticket = tickets_list[0]
             ticket_option = Select(ticket.find_element(By.XPATH,'.//*/select'))
